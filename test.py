@@ -48,3 +48,19 @@ w1 = w[1::2]
 std = anp.quantile(arr1, q, axis=0, weights=w1)
 res = dnp.nanquantile(arr, q, axis=0, method="linear", weights=w)
 print(np.where(np.isclose(res, std) == False))
+
+# test with perf
+N = 40000000
+M = 10000
+
+arr = np.arange(N).reshape(-1, M).astype(float)
+w = np.arange(M)
+
+import time
+
+st = time.time()
+std = np.nanquantile(arr, q, axis=1, method="inverted_cdf", weights=w)
+print("std time", time.time() - st)
+st = time.time()
+res = dnp.nanquantile(arr, q, axis=1, method="linear", weights=w)
+print("res time", time.time() - st)

@@ -289,7 +289,7 @@ def _remove_nan_1d(arr1d, weights, overwrite_input=False):
         else:
             if not overwrite_input:
                 weights = weights.copy()
-            print(arr1d.shape, weights.shape)
+
             enonan = weights[-s.size :][~c[-s.size :]]
             weights[s[: enonan.size]] = enonan
 
@@ -585,9 +585,17 @@ def _quantile(
         # See apply_along_axis, which we do for axis=0. Note that Ni = (,)
         # always, so we remove it here.
         Nk = arr.shape[1:]
-        for kk in np.ndindex(Nk):
-            result[(...,) + kk] = find_cdf_1d(arr[np.s_[:,] + kk], cdf[np.s_[:,] + kk])
+        if method == "inverted_cdf":
+            for kk in np.ndindex(Nk):
+                result[(...,) + kk] = find_cdf_1d(
+                    arr[np.s_[:,] + kk], cdf[np.s_[:,] + kk]
+                )
 
+        if method == "linear":
+            for kk in np.ndindex(Nk):
+                result[(...,) + kk] = np.interp(
+                    quantiles, cdf[np.s_[:,] + kk], arr[np.s_[:,] + kk]
+                )
         # Make result the same as in unweighted inverted_cdf.
         if result.shape == () and result.dtype == np.dtype("O"):
             result = result.item()
@@ -615,6 +623,7 @@ def _quantile_ureduce_func(
         # semantics. For now, keep the supported dimensions the same as it was
         # before.
         raise ValueError("q must be a scalar or 1d")
+
     if overwrite_input:
         if axis is None:
             axis = 0
@@ -744,9 +753,13 @@ def _nanquantile_1d(
     Private function for rank 1 arrays. Compute quantile ignoring NaNs.
     See nanpercentile for parameter usage
     """
-
-    arr1d, weights, overwrite_input = _remove_nan_1d(
-        arr1d, weights, overwrite_input=overwrite_input
+    if weights is not None:
+        if overwrite_input:
+            weights1d = weights.flatten()
+        else:
+            weights1d = weights.ravel()
+    arr1d, weights1d, overwrite_input = _remove_nan_1d(
+        arr1d, weights1d, overwrite_input=overwrite_input
     )
 
     if arr1d.size == 0:
@@ -758,7 +771,7 @@ def _nanquantile_1d(
         q,
         overwrite_input=overwrite_input,
         method=method,
-        weights=weights,
+        weights=weights1d,
     )
 
 
@@ -1021,15 +1034,18 @@ def nanquantile(
         raise ValueError("Quantiles must be in the range [0, 1]")
 
     if weights is not None:
-        # if method != "inverted_cdf":
-        #     msg = "Only method 'inverted_cdf' supports weights. " f"Got: {method}."
-        #     raise ValueError(msg)
+        if method != "inverted_cdf" and method != "linear":
+            msg = (
+                "Only method 'inverted_cdf' and 'linear' supports weights. "
+                f"Got: {method}."
+            )
+            raise ValueError(msg)
         if axis is not None:
             axis = normalize_axis_tuple(axis, a.ndim, argname="axis")
         weights = _weights_are_valid(weights=weights, a=a, axis=axis)
         if np.any(weights < 0):
             raise ValueError("Weights must be non-negative.")
-    print(weights.shape)
+
     return _nanquantile_unchecked(
         a, q, axis, out, overwrite_input, method, keepdims, weights
     )

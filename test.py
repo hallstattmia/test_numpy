@@ -64,3 +64,27 @@ print("std time", time.time() - st)
 st = time.time()
 res = dnp.nanquantile(arr, q, axis=1, method="linear", weights=w)
 print("res time", time.time() - st)
+
+
+# test numpy1
+import numpy as np
+
+q = np.asarray([0.3, 0.7])
+N = 10000000
+M = 10000
+arr = np.arange(N).reshape(-1, M).astype(float)
+w = np.ones(M)
+
+std = np.nanquantile(arr, q, axis=1)
+
+# test numpy2 edge case w[0] > 0
+
+import numpy as np
+
+q = np.asarray([0.3, 0.7])
+N = 10
+M = 10
+arr = np.arange(N).reshape(-1, M).astype(float)
+w = np.ones(M)
+
+std = np.nanquantile(arr, q, axis=1, method="inverted_cdf", weights=w)

@@ -544,6 +544,8 @@ def _quantile(
         # We use the weights to calculate the empirical cumulative
         # distribution function cdf
         cdf = weights.cumsum(axis=0, dtype=np.float64)
+        if method == "linear":
+            cdf -= cdf[0]
         cdf /= cdf[-1, ...]  # normalization to 1
         # Search index i such that
         #   sum(weights[j], j=0..i-1) < quantile <= sum(weights[j], j=0..i)
@@ -758,6 +760,8 @@ def _nanquantile_1d(
             weights1d = weights.flatten()
         else:
             weights1d = weights.ravel()
+    else:
+        weights1d = None
     arr1d, weights1d, overwrite_input = _remove_nan_1d(
         arr1d, weights1d, overwrite_input=overwrite_input
     )
